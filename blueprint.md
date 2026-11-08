@@ -97,14 +97,13 @@ Tidak ada autentikasi. Dua peran informal:
 IDLE (layar sambutan + privasi)
   └─ tap "Mulai"
       └─ MEMINTA_KAMERA
-          ├─ izin ok ─► POSISI_WAJAH (panduan oval) ─► wajah stabil ≥ 1 dtk
-          │              └─ SENYUM (maks 3 dtk, lanjut otomatis meski tidak senyum)
-          │                  └─ MEMINDAI (animasi 3–4 dtk, landmark + metrik palsu)
-          │                      └─ HASIL (karir + kartu + QR)
+          ├─ izin ok ─► POSISI_WAJAH (panduan oval + deteksi senyum realtime)
+          │              └─ [CEKREK SEKARANG!] / auto-stabil ≥ 1.2 dtk / Spasi
+          │                  └─ EFEK KILAT SHUTTER (180ms) ─► HASIL (karir + kartu + QR)
           │                          ├─ "Orang berikutnya" / idle 45 dtk ─► IDLE
           │                          └─ "Coba lagi" ─► POSISI_WAJAH
           └─ izin ditolak / kamera tidak ada / model gagal ─► MODE_TANPA_KAMERA
-                 (tahan tombol besar 3 dtk = "scan sidik jari" gimik) ─► MEMINDAI ─► HASIL
+                 (tahan tombol 2 dtk = "scan sidik jari" gimik) ─► HASIL
 ```
 
 **Non-happy-path wajib ada:**
@@ -193,17 +192,19 @@ Acceptance Criteria:
 - Empat tier: Umum, Langka, Epik, Legendaris
 - Tier Epik dan Legendaris punya efek visual khusus (kilau/konfeti ringan), tetap ringan di laptop biasa
 
-FR-013 — Kartu hasil.
+FR-013 — Kartu hasil & preview besar.
 Acceptance Criteria:
-- Dibuat dengan Canvas 2D di browser, ukuran 1080x1350 (rasio 4:5)
-- Berisi: foto (jika SHOW_PHOTO aktif), nama karir, badge tier, tagline, 3 statistik teratas, QR code, nama prodi + kampus, disclaimer hiburan
-- Ditampilkan di layar agar bisa difoto pengunjung dengan HP-nya
-- Tombol unduh hanya muncul jika config ENABLE_DOWNLOAD = true (default false)
+- Dibuat dengan Canvas 2D di browser, ukuran asli 1080x1350 (rasio 4:5)
+- Preview di layar diperbesar (max-width 520px–560px) dengan opsi perbesar layar penuh (zoom lightbox)
+- Berisi: foto (jika SHOW_PHOTO aktif), nama karir, badge tier, tagline, 3 statistik teratas, QR code download, nama prodi + kampus, disclaimer hiburan
+- Tombol unduh PNG langsung tersedia di layar kiosk dan di HP
 
-FR-014 — QR code.
+FR-014 — QR code download kartu.
 Acceptance Criteria:
-- Dibuat di browser (tanpa layanan eksternal) dari URL di config (TBD: Instagram/website prodi)
-- Jika URL belum diisi, QR disembunyikan (bukan menampilkan QR salah)
+- Dibuat 100% offline di browser (ISO/IEC 18004 Byte-Mode QR Matrix hingga Version 5)
+- Mengodekan link spesifik hasil karir pengunjung (`?c=...&s=...&e=...`), sehingga ketika pengunjung memindai QR lewat kamera HP:
+  - Otomatis membuka tampilan download kartu beresolusi tinggi di HP pengunjung
+  - Pengunjung dapat langsung mengunduh kartu (PNG) ke galeri HP dengan satu kali tap atau long-press foto
 
 FR-015 — Mode tanpa kamera.
 Acceptance Criteria:

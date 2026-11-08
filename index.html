@@ -205,8 +205,13 @@
     html[data-screen="MEMINDAI"] #screen-camera,
     html[data-screen="TANPA_KAMERA"] #screen-nocam,
     html[data-screen="HASIL"] #screen-result,
-    html[data-screen="ERROR"] #screen-error {
+    html[data-screen="ERROR"] #screen-error,
+    html[data-screen="DOWNLOAD_CARD"] #screen-mobile-download {
       display: block;
+    }
+
+    html[data-screen="DOWNLOAD_CARD"] .header-status {
+      display: none;
     }
 
     /* Buttons (FR-020: touch target >= 56px) */
@@ -432,11 +437,51 @@
       align-items: center;
       justify-content: center;
       box-shadow: var(--shadow-lg);
+      cursor: pointer;
     }
 
     .video-stage-card.oval-ready {
       border-color: var(--success);
       box-shadow: 0 0 35px rgba(52, 211, 153, 0.25);
+    }
+
+    /* Shutter Flash Animation (Sekali Cekrek) */
+    .shutter-flash {
+      position: absolute;
+      inset: 0;
+      background: #FFFFFF;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20;
+      transition: opacity 0.08s ease-out;
+    }
+
+    .shutter-flash.flashing {
+      opacity: 0.96;
+      transition: none;
+    }
+
+    .shutter-btn {
+      position: relative;
+      overflow: hidden;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+      animation: shutterPulse 2.4s infinite ease-in-out;
+    }
+
+    .shutter-btn:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 0 35px rgba(45, 212, 191, 0.7) !important;
+    }
+
+    .shutter-btn:active {
+      transform: scale(0.97);
+    }
+
+    @keyframes shutterPulse {
+      0%, 100% { box-shadow: 0 0 18px rgba(45, 212, 191, 0.35); }
+      50% { box-shadow: 0 0 32px rgba(45, 212, 191, 0.65); }
     }
 
     video#webcam-video {
@@ -695,8 +740,8 @@
        ========================================================================== */
     .result-grid {
       display: grid;
-      grid-template-columns: 1.25fr 0.9fr;
-      gap: 1.85rem;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 2rem;
       align-items: start;
     }
 
@@ -834,26 +879,40 @@
       background: var(--surface-glass);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 1.35rem;
+      padding: 1.5rem;
       text-align: center;
       box-shadow: var(--shadow-lg);
     }
 
     .card-canvas-wrapper {
       width: 100%;
-      max-width: 380px;
-      margin: 0 auto 0.85rem;
-      border-radius: 14px;
+      max-width: 520px;
+      margin: 0 auto 1.1rem;
+      border-radius: 18px;
       overflow: hidden;
-      border: 2px solid rgba(148, 163, 184, 0.28);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 16px 45px rgba(0, 0, 0, 0.65);
       background: #0B1220;
+      position: relative;
+      cursor: zoom-in;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-canvas-wrapper:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 55px rgba(45, 212, 191, 0.28);
     }
 
     canvas#result-card-canvas {
       width: 100%;
       height: auto;
       display: block;
+    }
+
+    @media (min-width: 1400px) {
+      .card-canvas-wrapper {
+        max-width: 560px;
+      }
     }
 
     /* ==========================================================================
@@ -1061,58 +1120,67 @@
     </section>
 
     <!-- ======================================================================
-         SCREEN 2: KAMERA & PEMINDAIAN (POSISI_WAJAH, SENYUM, MEMINDAI)
+         SCREEN 2: KAMERA & PEMINDAIAN (SEKALI CEKREK INSTAN)
          ====================================================================== -->
     <section id="screen-camera" class="screen" aria-label="Layar Pemindaian Wajah">
       <div class="camera-layout">
         <!-- Left: Video & Landmark Overlay -->
-        <div id="video-stage-container" class="video-stage-card">
+        <div id="video-stage-container" class="video-stage-card" title="Klik area kamera atau tombol Cekrek untuk ambil foto">
           <video id="webcam-video" playsinline muted></video>
           <canvas id="overlay-canvas"></canvas>
+          <div id="shutter-flash-overlay" class="shutter-flash" aria-hidden="true"></div>
           <div class="scan-laser" aria-hidden="true"></div>
 
           <div class="stage-hud-top">
-            <div class="hud-badge" id="camera-hud-phase">MEMUAT KAMERA…</div>
+            <div class="hud-badge" id="camera-hud-phase">📸 KAMERA AKTIF • SIAP CEKREK</div>
             <div class="hud-badge" id="camera-hud-fps">ON-DEVICE AI</div>
           </div>
 
           <div class="stage-hud-bottom" role="status" aria-live="polite">
-            <div class="guidance-text" id="camera-guidance-main">Posisikan wajahmu di dalam oval ya!</div>
-            <div class="guidance-sub" id="camera-guidance-sub">Pastikan hanya 1 orang di dalam frame</div>
+            <div class="guidance-text" id="camera-guidance-main">Posisikan wajahmu di dalam oval & klik Cekrek!</div>
+            <div class="guidance-sub" id="camera-guidance-sub">Bisa klik tombol CEKREK, klik video, atau tekan tombol Spasi</div>
           </div>
         </div>
 
-        <!-- Right: Progress, Smile Meter, & Live Fake Metrics -->
+        <!-- Right: Shutter Button & Live Feedback Panel -->
         <div class="scan-side-panel">
           <div>
-            <div class="phase-steps" aria-label="Tahapan Scan">
-              <div id="step-posisi" class="phase-step active">1. Posisi</div>
-              <div id="step-senyum" class="phase-step">2. Ekspresi</div>
-              <div id="step-pindai" class="phase-step">3. Analisis</div>
+            <div class="kiosk-tag" style="margin-bottom: 0.65rem;">
+              ⚡ SCAN CEPAT • SEKALI CEKREK
             </div>
 
-            <h2 id="scan-panel-title" style="font-size: 1.5rem; font-weight: 800; margin-bottom: 0.4rem;">
-              Deteksi Wajah On-Device
+            <h2 id="scan-panel-title" style="font-size: 1.45rem; font-weight: 800; margin-bottom: 0.35rem;">
+              Scan Wajah Interaktif
             </h2>
-            <p id="scan-panel-desc" style="font-size: 0.95rem; color: var(--muted); margin-bottom: 1.1rem;">
-              Arahkan wajah ke tengah panduan oval hingga berwarna hijau stabil.
+            <p id="scan-panel-desc" style="font-size: 0.92rem; color: var(--muted); margin-bottom: 1rem;">
+              Arahkan wajah ke oval, lalu klik tombol <strong>Cekrek</strong> untuk langsung lihat hasilnya!
             </p>
 
-            <!-- Smile / Stability Bar -->
+            <!-- Big Shutter Button -->
+            <button type="button" id="btn-shutter-snap" class="btn btn-primary btn-xl shutter-btn" style="width: 100%; margin-bottom: 1rem; cursor: pointer;">
+              <span style="font-size: 1.5rem;" aria-hidden="true">📸</span>
+              <span id="btn-shutter-label">CEKREK SEKARANG!</span>
+            </button>
+
+            <!-- Position & Auto-Snap Indicator Bar -->
             <div style="background: rgba(11,18,32,0.75); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 1.1rem;">
               <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.4rem;">
-                <span id="progress-label">Kestabilan Posisi Wajah</span>
-                <span id="progress-pct" style="font-family: var(--font-mono); color: var(--accent); font-weight: 700;">0%</span>
+                <span id="progress-label">Status Wajah & Senyum</span>
+                <span id="progress-pct" style="font-family: var(--font-mono); color: var(--accent); font-weight: 700;">Siap Cekrek</span>
               </div>
               <div class="bar-track" style="height: 10px;">
-                <div id="stage-progress-bar" class="bar-fill"></div>
+                <div id="stage-progress-bar" class="bar-fill" style="width: 100%;"></div>
+              </div>
+              <div style="font-size: 0.78rem; color: var(--muted); margin-top: 0.45rem; display: flex; justify-content: space-between; align-items: center;">
+                <span>💡 Senyum bikin vibes-nya makin seru!</span>
+                <span id="auto-snap-note" style="color: var(--accent-2); font-weight: 600;">Auto / Manual</span>
               </div>
             </div>
 
             <!-- 6 Fake Metrics Preview (FR-009) -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
               <span style="font-size: 0.82rem; font-family: var(--font-mono); color: var(--muted); text-transform: uppercase;">
-                Metrik Hiburan (Simulasi)
+                Metrik Hiburan (Simulasi Realtime)
               </span>
               <span style="font-size: 0.75rem; color: var(--accent-2);">Bukan analisis asli</span>
             </div>
@@ -1122,7 +1190,7 @@
             </div>
           </div>
 
-          <div style="display: flex; gap: 0.75rem; justify-content: space-between; align-items: center;">
+          <div style="display: flex; gap: 0.75rem; justify-content: space-between; align-items: center; margin-top: 1rem;">
             <button type="button" id="btn-cancel-scan" class="btn btn-secondary" style="flex: 1;">
               ✕ Batal
             </button>
@@ -1231,24 +1299,49 @@
           </div>
         </div>
 
-        <!-- Right: 1080x1350 Result Card Canvas for Phone Photo -->
+        <!-- Right: 1080x1350 Result Card Canvas with Direct Download & QR Scan -->
         <div class="card-preview-column">
-          <div style="font-weight: 800; font-size: 1.05rem; margin-bottom: 0.25rem; color: var(--accent);">
-            📸 Foto Kartu Ini Pakai HP-mu!
-          </div>
-          <div style="font-size: 0.84rem; color: var(--muted); margin-bottom: 0.85rem;">
-            Kartu dibuat langsung di layar tanpa disimpan ke server.
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="text-align: left;">
+              <div style="font-weight: 800; font-size: 1.15rem; color: var(--accent);">
+                📸 Kartu Hasil Resmi (1080 × 1350)
+              </div>
+              <div style="font-size: 0.84rem; color: var(--muted);">
+                Scan QR di kartu atau panel bawah untuk simpan ke HP.
+              </div>
+            </div>
+            <button type="button" id="btn-zoom-card" class="icon-btn" title="Perbesar Layar Penuh (Zoom)">
+              🔍 Perbesar
+            </button>
           </div>
 
-          <div class="card-canvas-wrapper">
+          <div class="card-canvas-wrapper" id="card-canvas-click-zoom" title="Klik untuk perbesar layar penuh">
             <canvas id="result-card-canvas" width="1080" height="1350" aria-label="Kartu Hasil Tebak Karir Informatika"></canvas>
           </div>
 
-          <!-- Optional Download button: only visible if CONFIG.ENABLE_DOWNLOAD === true -->
-          <div id="download-card-wrap" style="display: none; margin-top: 0.75rem;">
-            <button type="button" id="btn-download-card" class="btn btn-amber" style="width: 100%;">
+          <!-- Action Buttons on Kiosk Screen -->
+          <div style="display: flex; gap: 0.65rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <button type="button" id="btn-download-card" class="btn btn-amber" style="flex: 1; min-height: 52px; font-size: 1.05rem;">
               ⬇ Unduh Kartu (PNG)
             </button>
+            <button type="button" id="btn-copy-card-link" class="btn btn-secondary" style="min-height: 52px; padding: 0.6rem 1.1rem;" title="Salin Link Download Kartu">
+              📋 Salin Link
+            </button>
+          </div>
+
+          <!-- Dedicated QR Box for Phone Download -->
+          <div class="kiosk-qr-box" style="background: rgba(11, 18, 32, 0.78); border: 1.5px dashed var(--accent); border-radius: 14px; padding: 0.85rem 1.1rem; display: flex; align-items: center; gap: 1rem; text-align: left;">
+            <div style="background: #FFFFFF; padding: 6px; border-radius: 10px; flex-shrink: 0; box-shadow: 0 4px 14px rgba(0,0,0,0.4);">
+              <canvas id="qr-direct-canvas" width="96" height="96" style="display: block; width: 88px; height: 88px;"></canvas>
+            </div>
+            <div>
+              <div style="font-weight: 800; font-size: 1rem; color: var(--accent); margin-bottom: 0.2rem;">
+                📱 Scan QR untuk Download di HP
+              </div>
+              <div style="font-size: 0.84rem; color: #CBD5E1; line-height: 1.4;">
+                Arahkan kamera HP ke QR ini untuk langsung download kartu beresolusi tinggi ke galeri fotomu.
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1280,7 +1373,63 @@
       </div>
     </section>
 
+    <!-- ======================================================================
+         SCREEN 6: LAYAR DOWNLOAD KARTU DI HP (AKSES VIA SCAN QR)
+         ====================================================================== -->
+    <section id="screen-mobile-download" class="screen" aria-labelledby="mobile-dl-title">
+      <div style="max-width: 580px; margin: 0 auto; padding: 1.25rem 1rem; text-align: center;">
+        <div class="kiosk-tag" style="margin-bottom: 0.65rem;">
+          ✨ PRODI INFORMATIKA UIN GUS DUR PEKALONGAN
+        </div>
+        <h1 id="mobile-dl-title" style="font-size: 1.85rem; font-weight: 900; margin-bottom: 0.35rem; background: linear-gradient(95deg, #FFFFFF, #99F6E4, #FBBF24); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+          Kartu Hasil Karirmu Siap!
+        </h1>
+        <p style="font-size: 0.95rem; color: #CBD5E1; margin-bottom: 1.15rem;">
+          Simpan kartu hasil resolusi tinggi (1080 × 1350) ini langsung ke galeri HP-mu.
+        </p>
+
+        <!-- Responsive Card Preview for Phone -->
+        <div class="card-canvas-wrapper" style="max-width: 440px; margin-bottom: 1.25rem; border-color: var(--accent);">
+          <img id="mobile-card-img" alt="Kartu Hasil Tebak Karir" style="width: 100%; height: auto; display: block;" />
+          <canvas id="mobile-card-canvas" width="1080" height="1350" style="display: none;"></canvas>
+        </div>
+
+        <!-- Big Download Button -->
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 440px; margin: 0 auto 1.35rem;">
+          <button type="button" id="btn-mobile-download-action" class="btn btn-primary btn-xl" style="width: 100%; box-shadow: 0 12px 32px rgba(45, 212, 191, 0.45); font-size: 1.22rem;">
+            <span aria-hidden="true">⬇</span> Download Kartu (PNG)
+          </button>
+          <button type="button" id="btn-mobile-share-action" class="btn btn-secondary" style="width: 100%;">
+            <span aria-hidden="true">📲</span> Bagikan Hasil Ini
+          </button>
+          <a href="./" class="btn btn-secondary" style="width: 100%; text-decoration: none;">
+            <span aria-hidden="true">🎮</span> Coba Tebak Karir Sendiri
+          </a>
+        </div>
+
+        <div style="font-size: 0.85rem; color: var(--muted); line-height: 1.5; background: rgba(11,18,32,0.7); padding: 0.85rem 1rem; border-radius: 12px; border: 1px solid var(--border); max-width: 440px; margin: 0 auto;">
+          💡 <strong>Tips:</strong> Kamu juga bisa tekan & tahan gambar kartu di atas, lalu pilih <em>"Simpan Gambar"</em> (Save to Photos).
+          <div style="margin-top: 0.45rem; color: var(--accent-2); font-weight: 700;">
+            Hanya hiburan 😄 • Prodi Informatika UIN K.H. Abdurrahman Wahid Pekalongan
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
+
+  <!-- ========================================================================
+       CARD FULLSCREEN LIGHTBOX MODAL (ZOOM)
+       ======================================================================== -->
+  <div id="card-zoom-modal" class="operator-modal" role="dialog" aria-modal="true" style="z-index: 120;">
+    <div style="max-width: 90vw; max-height: 94vh; display: flex; flex-direction: column; align-items: center; position: relative;">
+      <button type="button" id="btn-close-zoom" class="icon-btn" style="position: absolute; top: -45px; right: 0; font-size: 1.1rem; padding: 0.5rem 1rem; background: var(--surface); color: var(--text);">✕ Tutup [ESC]</button>
+      <img id="card-zoom-img" alt="Kartu Karir Layar Penuh" style="max-width: 100%; max-height: 84vh; border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.85); border: 2px solid var(--accent); object-fit: contain;" />
+      <div style="margin-top: 0.75rem; display: flex; gap: 0.75rem;">
+        <button type="button" id="btn-download-from-zoom" class="btn btn-primary" style="min-height: 50px;">⬇ Unduh Gambar (PNG)</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ========================================================================
        OPERATOR & UNIT TEST MODAL (Shift+D or Operator Button)
@@ -1310,6 +1459,13 @@
           </label>
           <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer;">
             <input type="checkbox" id="op-toggle-consistent" /> Mode Konsisten Wajah (Eksperimental)
+          </label>
+          <label style="display: block; font-size: 0.84rem; margin-top: 0.65rem;">
+            <span style="font-weight: 700; color: var(--accent);">Host / URL QR Code (Download HP):</span>
+            <input type="text" id="op-input-share-host" placeholder="Kosongkan = otomatis domain/IP saat ini" style="width: 100%; margin-top: 0.25rem; padding: 0.4rem 0.55rem; background: #0B1220; border: 1px solid var(--border); color: var(--text); border-radius: 8px; font-family: var(--font-mono); font-size: 0.8rem;" />
+            <span style="display: block; font-size: 0.74rem; color: var(--muted); margin-top: 0.2rem;">
+              Otomatis mendeteksi IP WiFi/Vercel agar HP pengunjung bisa langsung scan & download.
+            </span>
           </label>
         </div>
 
@@ -1349,7 +1505,8 @@
       EVENT_TITLE: 'Tebak Karir Informatika',
       PRODI_NAME: 'Prodi Informatika',
       CAMPUS_NAME: 'UIN K.H. Abdurrahman Wahid Pekalongan',
-      QR_URL: 'https://uingusdur.ac.id', // Jika dikosongkan (''), QR otomatis disembunyikan (FR-014)
+      QR_URL: 'https://uingusdur.ac.id', // URL fallback kampus
+      SHARE_HOST: '',                    // URL dasar QR download (kosong = otomatis origin + path)
 
       // Bobot Kelangkaan (FR-010)
       TIER_WEIGHTS: {
@@ -1360,17 +1517,17 @@
       },
 
       // Durasi & Ambang Deteksi (dalam milidetik)
-      FACE_STABLE_MS: 1100,         // Wajah stabil >= 1 detik (FR-005)
+      FACE_STABLE_MS: 1200,         // Auto-cekrek saat wajah stabil di oval (jika pengunjung tidak klik tombol)
       NO_FACE_TIMEOUT_MS: 6000,     // Wajah tidak terdeteksi > 6 detik (FR-004 / Bagian 4)
-      SMILE_PROMPT_MAX_MS: 3000,    // Prompt senyum maks 3 detik (FR-007)
-      SCAN_DURATION_MS: 3600,       // Animasi pemindaian 3-4 detik (FR-008)
-      SCAN_TEXT_INTERVAL_MS: 600,   // Pergantian pesan status tiap 0.6 detik
-      NOCAM_HOLD_MS: 3000,          // Tahan tombol 3 detik (FR-015)
+      SMILE_PROMPT_MAX_MS: 1000,    // Durasi transisi senyum singkat
+      SCAN_DURATION_MS: 200,        // Transisi instan sekali cekrek
+      SCAN_TEXT_INTERVAL_MS: 500,   // Pergantian pesan status tiap 0.5 detik
+      NOCAM_HOLD_MS: 2000,          // Tahan tombol 2 detik (FR-015)
       IDLE_RESET_SECONDS: 45,       // Auto-reset 45 detik di layar hasil (FR-016)
       CURSOR_HIDE_MS: 5000,         // Sembunyikan kursor saat idle di kiosk
 
       // Ambang Senyum
-      SMILE_THRESHOLD: 0.56,
+      SMILE_THRESHOLD: 0.52,
 
       // Flag Privasi & Perilaku
       SHOW_PHOTO: true,             // Tampilkan snapshot dari memori di layar hasil & kartu (FR-011)
@@ -2034,14 +2191,14 @@
        7. js/core/sessionMachine.js — STATE MACHINE MURNI (Bagian 15)
        ======================================================================== */
     export const VALID_TRANSITIONS = {
-      IDLE: ['MEMINTA_KAMERA', 'TANPA_KAMERA', 'ERROR'],
+      IDLE: ['MEMINTA_KAMERA', 'POSISI_WAJAH', 'TANPA_KAMERA', 'ERROR'],
       MEMINTA_KAMERA: ['POSISI_WAJAH', 'TANPA_KAMERA', 'ERROR', 'IDLE'],
-      POSISI_WAJAH: ['SENYUM', 'TANPA_KAMERA', 'ERROR', 'IDLE'],
-      SENYUM: ['MEMINDAI', 'POSISI_WAJAH', 'TANPA_KAMERA', 'ERROR', 'IDLE'],
+      POSISI_WAJAH: ['HASIL', 'SENYUM', 'MEMINDAI', 'TANPA_KAMERA', 'ERROR', 'IDLE'],
+      SENYUM: ['MEMINDAI', 'HASIL', 'POSISI_WAJAH', 'TANPA_KAMERA', 'ERROR', 'IDLE'],
       MEMINDAI: ['HASIL', 'POSISI_WAJAH', 'TANPA_KAMERA', 'ERROR', 'IDLE'],
-      TANPA_KAMERA: ['MEMINDAI', 'IDLE', 'ERROR'],
+      TANPA_KAMERA: ['HASIL', 'MEMINDAI', 'IDLE', 'ERROR'],
       HASIL: ['IDLE', 'POSISI_WAJAH', 'TANPA_KAMERA'],
-      ERROR: ['IDLE', 'TANPA_KAMERA', 'MEMINTA_KAMERA']
+      ERROR: ['IDLE', 'TANPA_KAMERA', 'MEMINTA_KAMERA', 'POSISI_WAJAH']
     };
 
     export function createSessionMachine() {
@@ -2162,7 +2319,8 @@
       { version: 1, size: 21, dataBytes: 19, ecBytes: 7, align: [] },
       { version: 2, size: 25, dataBytes: 34, ecBytes: 10, align: [6, 18] },
       { version: 3, size: 29, dataBytes: 55, ecBytes: 15, align: [6, 22] },
-      { version: 4, size: 33, dataBytes: 80, ecBytes: 20, align: [6, 26] }
+      { version: 4, size: 33, dataBytes: 80, ecBytes: 20, align: [6, 26] },
+      { version: 5, size: 37, dataBytes: 108, ecBytes: 26, align: [6, 30] }
     ];
 
     /**
@@ -2174,8 +2332,8 @@
       if (!text || typeof text !== 'string' || text.trim() === '') return null;
       const bytes = new TextEncoder().encode(text.trim());
 
-      let spec = QR_VERSIONS[4];
-      for (let v = 1; v <= 4; v++) {
+      let spec = null;
+      for (let v = 1; v < QR_VERSIONS.length; v++) {
         const s = QR_VERSIONS[v];
         if (s && bytes.length + 2 <= s.dataBytes) {
           spec = s;
@@ -2844,17 +3002,17 @@
         const qrDrawn = drawQrToCanvas(ctx, qrUrl, 95, footerY, 175);
         if (qrDrawn) {
           ctx.textAlign = 'left';
-          ctx.fillStyle = '#F1F5F9';
+          ctx.fillStyle = '#2DD4BF';
           ctx.font = 'bold 28px system-ui, sans-serif';
-          ctx.fillText('Kenali Prodi Informatika Lebih Dekat!', 295, footerY + 55);
+          ctx.fillText('Scan QR untuk Download Kartu!', 295, footerY + 52);
 
-          ctx.fillStyle = '#94A3B8';
+          ctx.fillStyle = '#F1F5F9';
           ctx.font = '24px system-ui, sans-serif';
-          ctx.fillText('Scan QR di samping untuk info & kegiatan kampus.', 295, footerY + 95);
+          ctx.fillText('Arahkan kamera HP untuk simpan kartu ke galeri.', 295, footerY + 92);
 
           ctx.fillStyle = '#FBBF24';
-          ctx.font = 'bold 24px system-ui, sans-serif';
-          ctx.fillText(`${ TEXT_BANK.cardDisclaimer } • Bukan tes bakat ilmiah`, 295, footerY + 142);
+          ctx.font = 'bold 23px system-ui, sans-serif';
+          ctx.fillText(`${ TEXT_BANK.cardDisclaimer } • Prodi Informatika UIN Gus Dur`, 295, footerY + 140);
         }
       } else {
         ctx.textAlign = 'center';
@@ -3115,19 +3273,111 @@
       }
     }
 
-    // Step indicator helper
-    function updatePhaseStepPills(activeStep) {
-      const s1 = document.getElementById('step-posisi');
-      const s2 = document.getElementById('step-senyum');
-      const s3 = document.getElementById('step-pindai');
-      if (!s1 || !s2 || !s3) return;
-      s1.className = 'phase-step' + (activeStep === 1 ? ' active' : activeStep > 1 ? ' done' : '');
-      s2.className = 'phase-step' + (activeStep === 2 ? ' active' : activeStep > 2 ? ' done' : '');
-      s3.className = 'phase-step' + (activeStep === 3 ? ' active' : '');
+    // Step indicator helper (retained for backward compatibility)
+    function updatePhaseStepPills(_activeStep) {
+      // Single-step streamlined scan
     }
 
     /* ========================================================================
-       ALUR 1: MULAI KAMERA & POSISI WAJAH (FR-002, FR-004, FR-005, FR-006)
+       SHUTTER CLICK SOUND & SNAPSHOT CONTROLLER (SEKALI CEKREK INSTAN)
+       ======================================================================== */
+    function playShutterSound() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+
+        // Mechanical camera shutter sound click
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(1400, ctx.currentTime);
+        osc1.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.045);
+        gain1.gain.setValueAtTime(0.35, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.045);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 0.045);
+
+        // Secondary release click
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(900, ctx.currentTime + 0.05);
+        osc2.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 0.11);
+        gain2.gain.setValueAtTime(0.3, ctx.currentTime + 0.05);
+        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.11);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(ctx.currentTime + 0.05);
+        osc2.stop(ctx.currentTime + 0.11);
+      } catch (_e) {
+        // Audio output not permitted / not available
+      }
+    }
+
+    let isSnapping = false;
+
+    export function triggerCekrek(forcedDet = null) {
+      if (isSnapping || machine.getState().phase !== 'POSISI_WAJAH') return;
+      isSnapping = true;
+
+      playShutterSound();
+
+      // Efek kilat visual kamera (white flash)
+      const flashEl = document.getElementById('shutter-flash-overlay');
+      if (flashEl) {
+        flashEl.classList.add('flashing');
+      }
+
+      // Ambil snapshot wajah dari webcam ke canvas memori
+      const snapCanvas = captureMemorySnapshot();
+
+      const now = performance.now();
+      const det = forcedDet || detectFaceFrame(videoEl, now);
+      const expression = (det && det.smileScore >= CONFIG.SMILE_THRESHOLD) ? 'senyum' : 'netral';
+      const faceHash = det ? det.faceHash : 0;
+
+      // Pilih karir & racik statistik seketika
+      const currentLastId = machine.getState().lastCareerId;
+      const rng = (CONFIG.RESULT_MODE === 'face-consistent' && faceHash > 0)
+        ? createSeededRng(faceHash)
+        : Math.random;
+
+      const chosenCareer = pickCareer(CAREERS, currentLastId, rng);
+      const finalStats = generateStats(chosenCareer, rng);
+      const introText = composeIntro(chosenCareer, expression, rng);
+
+      stopAnimationLoop();
+      stopCameraStream();
+
+      // Sekali cekrek langsung keluar hasil dalam 180ms (memberi waktu visual flash)
+      setSafeTimeout(() => {
+        if (flashEl) flashEl.classList.remove('flashing');
+        machine.transition('HASIL', {
+          expression,
+          snapshotCanvas: snapCanvas,
+          faceHash,
+          result: {
+            career: chosenCareer,
+            stats: finalStats,
+            intro: introText
+          },
+          lastCareerId: chosenCareer.id
+        });
+        enterHasilPhase({
+          career: chosenCareer,
+          stats: finalStats,
+          intro: introText
+        });
+        isSnapping = false;
+      }, 180);
+    }
+
+    /* ========================================================================
+       ALUR 1: SCAN KAMERA SEKALI CEKREK (FR-002, FR-004, FR-005, FR-006)
        ======================================================================== */
     async function startCameraFlow() {
       clearAllTimersAndLoops();
@@ -3168,17 +3418,39 @@
 
     function enterPosisiWajahPhase() {
       clearAllTimersAndLoops();
+      isSnapping = false;
       machine.transition('POSISI_WAJAH');
-      updatePhaseStepPills(1);
-      hudPhase.textContent = 'TAHAP 1/3 • POSISI WAJAH';
-      progressLabel.textContent = 'Kestabilan Posisi Wajah';
+      hudPhase.textContent = '📸 KAMERA AKTIF • SIAP CEKREK';
+      progressLabel.textContent = 'Status Wajah & Senyum';
+      progressPct.textContent = 'Siap Cekrek';
+      guidanceMain.textContent = 'Posisikan wajahmu di dalam oval & klik Cekrek!';
+      guidanceSub.textContent = 'Bisa klik tombol CEKREK, klik video, atau tekan tombol Spasi';
       renderScanMetricBars();
+
+      // Pasang event klik tombol Cekrek
+      const btnShutter = document.getElementById('btn-shutter-snap');
+      if (btnShutter) {
+        btnShutter.onclick = (e) => {
+          e.preventDefault();
+          triggerCekrek();
+        };
+      }
+
+      // Klik langsung di frame video juga memicu Cekrek
+      if (videoStageCard) {
+        videoStageCard.onclick = (e) => {
+          if (e.target && e.target.closest && e.target.closest('.stage-hud-top')) return;
+          triggerCekrek();
+        };
+      }
 
       let stableAccumMs = 0;
       let noFaceAccumMs = 0;
       let lastFrameTime = performance.now();
+      let lastMetricUpdate = 0;
 
       setAnimationLoop((now) => {
+        if (isSnapping) return;
         const dt = Math.min(100, Math.max(0, now - lastFrameTime));
         lastFrameTime = now;
 
@@ -3191,12 +3463,16 @@
           videoStageCard.classList.remove('oval-ready');
           guidanceMain.textContent = TEXT_BANK.guidance.multiFace;
           guidanceSub.textContent = 'Proses ditahan sampai tinggal 1 wajah di kamera.';
+          progressPct.textContent = '2 Wajah';
+          progressBar.style.width = '0%';
         } else if (det.faceCount === 0) {
           stableAccumMs = Math.max(0, stableAccumMs - dt * 1.5);
           noFaceAccumMs += dt;
           videoStageCard.classList.remove('oval-ready');
-          guidanceMain.textContent = noFaceAccumMs > 2200 ? TEXT_BANK.guidance.noFace : TEXT_BANK.guidance.position;
+          guidanceMain.textContent = noFaceAccumMs > 2200 ? TEXT_BANK.guidance.noFace : 'Arahkan wajah ke oval panduan ya!';
           guidanceSub.textContent = 'Pastikan wajah menghadap kamera dengan cahaya cukup.';
+          progressPct.textContent = 'Mencari…';
+          progressBar.style.width = '20%';
 
           if (noFaceAccumMs >= CONFIG.NO_FACE_TIMEOUT_MS) {
             stopAnimationLoop();
@@ -3206,178 +3482,118 @@
         } else {
           // Tepat 1 wajah
           noFaceAccumMs = 0;
+          const isSmiling = det.smileScore >= CONFIG.SMILE_THRESHOLD;
+
           if (det.distanceState === 'too_far') {
             stableAccumMs = Math.max(0, stableAccumMs - dt);
             videoStageCard.classList.remove('oval-ready');
             guidanceMain.textContent = TEXT_BANK.guidance.tooFar;
             guidanceSub.textContent = 'Majukan wajahmu agar memenuhi oval panduan.';
+            progressPct.textContent = 'Terlalu Jauh';
           } else if (det.distanceState === 'too_close') {
             stableAccumMs = Math.max(0, stableAccumMs - dt);
             videoStageCard.classList.remove('oval-ready');
             guidanceMain.textContent = TEXT_BANK.guidance.tooClose;
             guidanceSub.textContent = 'Mundur sedikit supaya seluruh wajah terlihat.';
+            progressPct.textContent = 'Terlalu Dekat';
           } else if (det.inOval) {
             stableAccumMs += dt;
             videoStageCard.classList.add('oval-ready');
-            guidanceMain.textContent = 'Posisi pas! Tahan sebentar…';
-            guidanceSub.textContent = 'Mengunci koordinat landmark wajah';
+            if (isSmiling) {
+              guidanceMain.textContent = 'Senyum terdeteksi! Klik Cekrek sekarang 😄';
+              guidanceSub.textContent = 'Atau tahan posisi: auto-cekrek aktif';
+              progressPct.textContent = 'Senyum! 😊';
+            } else {
+              guidanceMain.textContent = 'Posisi pas! Klik Cekrek atau senyum 😄';
+              guidanceSub.textContent = 'Bisa langsung klik tombol CEKREK / Spasi';
+              progressPct.textContent = 'Pas & Siap';
+            }
           } else {
             stableAccumMs = Math.max(0, stableAccumMs - dt * 0.5);
             videoStageCard.classList.remove('oval-ready');
-            guidanceMain.textContent = TEXT_BANK.guidance.position;
-            guidanceSub.textContent = 'Geser wajah ke tengah oval.';
+            guidanceMain.textContent = 'Geser wajahmu ke dalam oval ya!';
+            guidanceSub.textContent = 'Pastikan berada di tengah lingkaran panduan.';
+            progressPct.textContent = 'Posisikan';
           }
+        }
+
+        // Metrik simulasi bergerak dinamis secara realtime
+        if (now - lastMetricUpdate > 120) {
+          lastMetricUpdate = now;
+          const base = det.inOval ? 72 : 45;
+          const smileBoost = Math.round((det.smileScore || 0) * 18);
+          renderScanMetricBars({
+            LOGIKA: Math.min(99, Math.max(30, Math.round(base + 12 * Math.sin(now / 520)))),
+            KREATIVITAS: Math.min(99, Math.max(30, Math.round(base + 10 * Math.cos(now / 410) + smileBoost))),
+            DEBUG: Math.min(99, Math.max(30, Math.round(base - 8 * Math.sin(now / 610)))),
+            TIM: Math.min(99, Math.max(30, Math.round(base + 11 * Math.sin(now / 390) + smileBoost))),
+            BEGADANG: Math.min(99, Math.max(30, Math.round(base + 15 * Math.cos(now / 730)))),
+            GOOGLING: Math.min(99, Math.max(30, Math.round(base + 9 * Math.sin(now / 470))))
+          });
         }
 
         const ratio = Math.min(1, stableAccumMs / CONFIG.FACE_STABLE_MS);
         const pct = Math.round(ratio * 100);
-        progressPct.textContent = `${pct}%`;
         progressBar.style.width = `${pct}%`;
 
         drawVideoOverlay(det, 'POSISI_WAJAH', ratio, now);
 
-        if (ratio >= 1) {
-          stopAnimationLoop();
-          enterSenyumPhase(det.faceHash);
+        // Auto-snap jika pengunjung membiarkan wajah stabil di oval tanpa perlu klik
+        if (ratio >= 1 && det.inOval && det.faceCount === 1) {
+          triggerCekrek(det);
         }
       });
     }
 
-    /* ========================================================================
-       ALUR 2: PROMPT SENYUM (FR-007)
-       ======================================================================== */
-    function enterSenyumPhase(initialFaceHash = 0) {
-      clearAllTimersAndLoops();
-      machine.transition('SENYUM', { faceHash: initialFaceHash });
-      updatePhaseStepPills(2);
-      hudPhase.textContent = 'TAHAP 2/3 • DETEKSI SENYUM';
-      progressLabel.textContent = 'Indikator Senyum';
-      guidanceMain.textContent = TEXT_BANK.guidance.smile;
-
-      const startTime = performance.now();
-      let smiled = false;
-      let smileHoldMs = 0;
-      let lastTime = startTime;
-
-      setAnimationLoop((now) => {
-        const dt = Math.min(100, Math.max(0, now - lastTime));
-        lastTime = now;
-        const elapsed = now - startTime;
-        const remainSec = Math.max(0, Math.ceil((CONFIG.SMILE_PROMPT_MAX_MS - elapsed) / 1000));
-
-        const det = detectFaceFrame(videoEl, now);
-        if (det.faceCount > 1) {
-          guidanceMain.textContent = TEXT_BANK.guidance.multiFace;
-          return;
-        }
-
-        const score = det.smileScore || 0.35;
-        const pct = Math.min(100, Math.round((score / CONFIG.SMILE_THRESHOLD) * 85));
-        progressPct.textContent = `${pct}%`;
-        progressBar.style.width = `${pct}%`;
-        guidanceSub.textContent = `Waktu tersisa: ${remainSec} detik (lanjut otomatis)`;
-
-        if (score >= CONFIG.SMILE_THRESHOLD) {
-          smileHoldMs += dt;
-          if (smileHoldMs >= 450) {
-            smiled = true;
-          }
-        }
-
-        drawVideoOverlay(det, 'SENYUM', 1, now);
-
-        if ((smiled && elapsed >= 950) || elapsed >= CONFIG.SMILE_PROMPT_MAX_MS) {
-          stopAnimationLoop();
-          const snap = captureMemorySnapshot();
-          enterMemindaiPhase(smiled ? 'senyum' : 'netral', snap, det.faceHash || initialFaceHash);
-        }
-      });
+    // Forwarders untuk backward-compatibility
+    function enterSenyumPhase(_initialFaceHash = 0) {
+      triggerCekrek();
     }
 
-    /* ========================================================================
-       ALUR 3: ANIMASI PEMINDAIAN & METRIK PALSU (FR-008, FR-009)
-       ======================================================================== */
-    function enterMemindaiPhase(expression, snapshotCanvas, faceHash = 0) {
-      clearAllTimersAndLoops();
-      machine.transition('MEMINDAI', { expression, snapshotCanvas, faceHash });
-      updatePhaseStepPills(3);
-      hudPhase.textContent = 'TAHAP 3/3 • MENGANALISIS…';
-      progressLabel.textContent = 'Progres Pemindaian';
+    function enterMemindaiPhase(_expression, _snapshotCanvas, _faceHash = 0) {
+      triggerCekrek();
+    }
 
-      // Pilih karir & stat target terlebih dahulu
-      const currentLastId = machine.getState().lastCareerId;
-      const rng = (CONFIG.RESULT_MODE === 'face-consistent' && faceHash > 0)
-        ? createSeededRng(faceHash)
-        : Math.random;
+    /**
+     * Download elemen canvas sebagai file gambar PNG
+     * @param {HTMLCanvasElement|null} canvas
+     * @param {string} [filename]
+     */
+    export function downloadCanvasAsPng(canvas, filename = 'kartu-karir-informatika.png') {
+      if (!canvas) return;
+      try {
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error('Download error:', err);
+      }
+    }
 
-      const chosenCareer = pickCareer(CAREERS, currentLastId, rng);
-      const finalStats = generateStats(chosenCareer, rng);
-      const introText = composeIntro(chosenCareer, expression, rng);
+    /**
+     * Menghasilkan URL download khusus untuk kartu hasil tertentu
+     */
+    export function buildCardShareUrl(career, stats, expression = 'netral') {
+      let base = CONFIG.SHARE_HOST && CONFIG.SHARE_HOST.trim().length > 0
+        ? CONFIG.SHARE_HOST.trim()
+        : window.location.origin + window.location.pathname;
 
-      // Rotasi teks status tiap 0.6 detik dari Lampiran B
-      const shuffledMessages = [...TEXT_BANK.scanStatuses].sort(() => Math.random() - 0.5);
-      let msgIdx = 0;
-      guidanceMain.textContent = shuffledMessages[0];
-      guidanceSub.textContent = 'Mencocokkan algoritma cocoklogi Informatika…';
-
-      setSafeInterval(() => {
-        msgIdx = (msgIdx + 1) % shuffledMessages.length;
-        guidanceMain.textContent = shuffledMessages[msgIdx];
-      }, CONFIG.SCAN_TEXT_INTERVAL_MS);
-
-      const startTime = performance.now();
-      let faceMissingMs = 0;
-      let lastTime = startTime;
-      const isCameraActive = Boolean(activeMediaStream);
-
-      setAnimationLoop((now) => {
-        const dt = Math.min(100, Math.max(0, now - lastTime));
-        lastTime = now;
-        const elapsed = now - startTime;
-        const progress = Math.min(1, elapsed / CONFIG.SCAN_DURATION_MS);
-
-        const pct = Math.round(progress * 100);
-        progressPct.textContent = `${pct}%`;
-        progressBar.style.width = `${pct}%`;
-
-        // Animasi hitung naik untuk 6 metrik palsu (FR-009)
-        /** @type {Record<string, number>} */
-        const animatedStats = {};
-        for (const id of ALL_STAT_IDS) {
-          animatedStats[id] = Math.round(finalStats[id] * progress);
-        }
-        renderScanMetricBars(animatedStats);
-
-        if (isCameraActive) {
-          const det = detectFaceFrame(videoEl, now);
-          drawVideoOverlay(det, 'MEMINDAI', 1, now);
-
-          // Jika wajah hilang > 1.3 detik di tengah scan, kembali ke POSISI_WAJAH (Bagian 4)
-          if (det.faceCount === 0) {
-            faceMissingMs += dt;
-            if (faceMissingMs > 1350) {
-              stopAnimationLoop();
-              guidanceMain.textContent = TEXT_BANK.guidance.faceLost;
-              enterPosisiWajahPhase();
-              return;
-            }
-          } else {
-            faceMissingMs = 0;
-          }
-        } else {
-          drawVideoOverlay({ faceCount: 0, inOval: true, distanceState: 'ok', smileScore: 0, landmarks: [] }, 'MEMINDAI', 1, now);
-        }
-
-        if (progress >= 1) {
-          stopAnimationLoop();
-          stopCameraStream(); // Matikan kamera segera saat masuk layar hasil (FR-002)
-          enterHasilPhase({
-            career: chosenCareer,
-            stats: finalStats,
-            intro: introText
-          });
-        }
-      });
+      try {
+        const url = new URL(base, window.location.href);
+        const statValues = ALL_STAT_IDS.map(id => stats[id] ?? 50).join(',');
+        url.searchParams.set('c', career.id);
+        url.searchParams.set('s', statValues);
+        url.searchParams.set('e', expression === 'senyum' ? 's' : 'n');
+        return url.toString();
+      } catch (_e) {
+        const sep = base.includes('?') ? '&' : '?';
+        const statValues = ALL_STAT_IDS.map(id => stats[id] ?? 50).join(',');
+        return `${base}${sep}c=${career.id}&s=${statValues}&e=${expression === 'senyum' ? 's' : 'n'}`;
+      }
     }
 
     /* ========================================================================
@@ -3401,7 +3617,6 @@
       const introEl = /** @type {HTMLElement} */ (document.getElementById('result-intro'));
       const descEl = /** @type {HTMLElement} */ (document.getElementById('result-description'));
       const statsGrid = /** @type {HTMLElement} */ (document.getElementById('result-stats-grid'));
-      const dlWrap = /** @type {HTMLElement} */ (document.getElementById('download-card-wrap'));
 
       mainCard.setAttribute('data-tier', career.tier);
       tierBadge.setAttribute('data-tier', career.tier);
@@ -3439,6 +3654,9 @@
         `;
       }).join('');
 
+      // Buat URL download khusus untuk kartu ini
+      const shareUrl = buildCardShareUrl(career, stats, machine.getState().expression);
+
       // Render 1080x1350 Canvas Card (FR-013)
       const cardCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('result-card-canvas'));
       renderResultCard(cardCanvas, {
@@ -3446,10 +3664,42 @@
         stats,
         snapshotCanvas: machine.getState().snapshotCanvas,
         showPhoto: CONFIG.SHOW_PHOTO,
-        qrUrl: CONFIG.QR_URL
+        qrUrl: shareUrl
       });
 
-      dlWrap.style.display = CONFIG.ENABLE_DOWNLOAD ? 'block' : 'none';
+      // Render juga QR Code terpisah pada panel download HP di layar
+      const directQrCanvas = /** @type {HTMLCanvasElement|null} */ (document.getElementById('qr-direct-canvas'));
+      if (directQrCanvas) {
+        const qctx = directQrCanvas.getContext('2d');
+        if (qctx) {
+          qctx.clearRect(0, 0, 96, 96);
+          drawQrToCanvas(qctx, shareUrl, 0, 0, 96);
+        }
+      }
+
+      // Handler tombol unduh langsung di layar kiosk
+      const btnDlDirect = document.getElementById('btn-download-card');
+      if (btnDlDirect) {
+        btnDlDirect.onclick = () => {
+          const slug = career.title.toLowerCase().replace(/[\s\/]+/g, '-');
+          downloadCanvasAsPng(cardCanvas, `kartu-karir-${slug}.png`);
+        };
+      }
+
+      // Handler salin link download
+      const btnCopy = document.getElementById('btn-copy-card-link');
+      if (btnCopy) {
+        btnCopy.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(shareUrl);
+            const orig = btnCopy.textContent;
+            btnCopy.textContent = '✓ Disalin!';
+            setTimeout(() => { btnCopy.textContent = orig; }, 1800);
+          } catch (_e) {
+            prompt('Salin link download kartu:', shareUrl);
+          }
+        };
+      }
 
       // Efek Konfeti Ringan untuk Tier Epik & Legendaris (FR-012)
       if (career.tier === 'epik' || career.tier === 'legendaris') {
@@ -3525,7 +3775,28 @@
             holding = false;
             btnHold.classList.remove('holding');
             stopAnimationLoop();
-            enterMemindaiPhase('tanpa_kamera', null, 0);
+
+            const currentLastId = machine.getState().lastCareerId;
+            const chosenCareer = pickCareer(CAREERS, currentLastId);
+            const finalStats = generateStats(chosenCareer);
+            const introText = composeIntro(chosenCareer, 'tanpa_kamera');
+
+            machine.transition('HASIL', {
+              expression: 'tanpa_kamera',
+              snapshotCanvas: null,
+              faceHash: 0,
+              result: {
+                career: chosenCareer,
+                stats: finalStats,
+                intro: introText
+              },
+              lastCareerId: chosenCareer.id
+            });
+            enterHasilPhase({
+              career: chosenCareer,
+              stats: finalStats,
+              intro: introText
+            });
           }
         });
       };
@@ -3865,8 +4136,17 @@ self.addEventListener('fetch', e => {
         ].join('\n');
       });
 
-      // Pintasan Keyboard Operator (Bagian 3 & FR-016)
+      // Pintasan Keyboard: Spasi/Enter untuk Cekrek Cepat & Shift+Key Operator
       window.addEventListener('keydown', (e) => {
+        // Cekrek seketika saat di layar kamera
+        if (machine.getState().phase === 'POSISI_WAJAH') {
+          if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            triggerCekrek();
+            return;
+          }
+        }
+
         if (!e.shiftKey) return;
         const key = e.key.toUpperCase();
         if (key === 'F') {
@@ -3905,6 +4185,18 @@ self.addEventListener('fetch', e => {
       window.addEventListener('pointermove', wakeCursor);
       window.addEventListener('keydown', wakeCursor);
 
+      // Pengaturan host QR code dari operator
+      const opInputHost = /** @type {HTMLInputElement|null} */ (document.getElementById('op-input-share-host'));
+      if (opInputHost) {
+        opInputHost.value = CONFIG.SHARE_HOST;
+        opInputHost.addEventListener('input', (e) => {
+          CONFIG.SHARE_HOST = /** @type {HTMLInputElement} */ (e.target).value.trim();
+        });
+      }
+
+      // Pasang modal zoom kartu
+      setupCardZoomModal();
+
       // Rotasi karir showcase di layar sambutan (IDLE)
       let showcaseIdx = 0;
       const showcaseEmoji = document.getElementById('idle-Showcase-emoji');
@@ -3919,14 +4211,145 @@ self.addEventListener('fetch', e => {
 
       // Handler error global agar layar tidak pernah putih kosong (Bagian 19)
       window.addEventListener('error', () => {
-        resetSessionToIdle();
+        if (htmlEl.getAttribute('data-screen') !== 'DOWNLOAD_CARD') {
+          resetSessionToIdle();
+        }
       });
       window.addEventListener('unhandledrejection', () => {
-        resetSessionToIdle();
+        if (htmlEl.getAttribute('data-screen') !== 'DOWNLOAD_CARD') {
+          resetSessionToIdle();
+        }
       });
     }
 
-    initEventListeners();
+    function setupCardZoomModal() {
+      const zoomModal = document.getElementById('card-zoom-modal');
+      const zoomImg = /** @type {HTMLImageElement|null} */ (document.getElementById('card-zoom-img'));
+      const btnZoom = document.getElementById('btn-zoom-card');
+      const btnCloseZoom = document.getElementById('btn-close-zoom');
+      const btnDlZoom = document.getElementById('btn-download-from-zoom');
+      const cardCanvas = /** @type {HTMLCanvasElement|null} */ (document.getElementById('result-card-canvas'));
+      const cardClickWrap = document.getElementById('card-canvas-click-zoom');
+
+      const openZoom = () => {
+        if (!cardCanvas || !zoomModal || !zoomImg) return;
+        try {
+          zoomImg.src = cardCanvas.toDataURL('image/png');
+          zoomModal.classList.add('open');
+        } catch (_e) {}
+      };
+
+      const closeZoom = () => zoomModal?.classList.remove('open');
+
+      btnZoom?.addEventListener('click', openZoom);
+      cardClickWrap?.addEventListener('click', () => {
+        if (machine.getState().phase === 'HASIL') openZoom();
+      });
+      btnCloseZoom?.addEventListener('click', closeZoom);
+      zoomModal?.addEventListener('click', (e) => {
+        if (e.target === zoomModal) closeZoom();
+      });
+
+      btnDlZoom?.addEventListener('click', () => {
+        const titleEl = document.getElementById('result-career-title');
+        const slug = (titleEl?.textContent || 'karir').toLowerCase().replace(/[\s\/]+/g, '-');
+        downloadCanvasAsPng(cardCanvas, `kartu-${slug}.png`);
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && zoomModal?.classList.contains('open')) {
+          closeZoom();
+        }
+      });
+    }
+
+    function checkUrlForCardDownload() {
+      const params = new URLSearchParams(window.location.search);
+      const careerId = params.get('c');
+      if (!careerId) return false;
+
+      const career = CAREERS.find(c => c.id === careerId) || CAREERS[0];
+
+      // Parse stats dari parameter s=95,88,70,60,40,85
+      const statStr = params.get('s') || '';
+      const statParts = statStr.split(',').map(n => parseInt(n, 10));
+      /** @type {Record<string, number>} */
+      const stats = {};
+      ALL_STAT_IDS.forEach((id, idx) => {
+        stats[id] = !isNaN(statParts[idx]) ? statParts[idx] : 75;
+      });
+
+      const exprParam = params.get('e');
+      const expression = exprParam === 's' ? 'senyum' : 'netral';
+
+      // Alihkan layar ke tampilan download HP
+      htmlEl.setAttribute('data-screen', 'DOWNLOAD_CARD');
+
+      const canvas = /** @type {HTMLCanvasElement|null} */ (document.getElementById('mobile-card-canvas'));
+      const imgEl = /** @type {HTMLImageElement|null} */ (document.getElementById('mobile-card-img'));
+
+      if (canvas) {
+        renderResultCard(canvas, {
+          career,
+          stats,
+          snapshotCanvas: null,
+          showPhoto: false,
+          qrUrl: window.location.href
+        });
+
+        try {
+          const dataUrl = canvas.toDataURL('image/png');
+          if (imgEl) imgEl.src = dataUrl;
+        } catch (_e) {}
+      }
+
+      const fileName = `kartu-karir-${career.title.toLowerCase().replace(/[\s\/]+/g, '-')}.png`;
+
+      // Tombol download di HP
+      const btnDl = document.getElementById('btn-mobile-download-action');
+      if (btnDl) {
+        btnDl.onclick = () => {
+          downloadCanvasAsPng(canvas, fileName);
+        };
+      }
+
+      // Tombol bagikan di HP
+      const btnShare = document.getElementById('btn-mobile-share-action');
+      if (btnShare) {
+        btnShare.onclick = async () => {
+          if (navigator.share) {
+            try {
+              await navigator.share({
+                title: `Tebak Karir Informatika: ${career.title}`,
+                text: `Hasil Tebak Karir Informatika: ${career.title} ("${career.tagline}")! Coba tebak karirmu juga:`,
+                url: window.location.href
+              });
+            } catch (_err) {}
+          } else {
+            try {
+              await navigator.clipboard.writeText(window.location.href);
+              alert('Link kartu berhasil disalin ke clipboard!');
+            } catch (_e) {
+              prompt('Salin link kartu ini:', window.location.href);
+            }
+          }
+        };
+      }
+
+      return true;
+    }
+
+    // Periksa apakah halaman dibuka dari scan QR download HP
+    const isMobileDownloadMode = checkUrlForCardDownload();
+    if (!isMobileDownloadMode) {
+      initEventListeners();
+    } else {
+      // Event listener minimum saat di mode download HP
+      document.getElementById('btn-fullscreen')?.addEventListener('click', () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+        else document.exitFullscreen?.().catch(() => {});
+      });
+    }
   </script>
 </body>
 </html>
